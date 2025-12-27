@@ -1194,6 +1194,737 @@ Authorization: Bearer USER1_TOKEN
 
 ---
 
+
+
+# ⭐ STEP 11: Test Starred Feature
+
+> **Comprehensive testing for starred items with permission validation**
+
+---
+
+## 📋 Prerequisites for Starred Tests
+
+Before starting, ensure you have:
+- All users logged in with saved tokens
+- Folders created in different departments and MyDrives
+- User permissions already set up from previous steps
+
+**Required Variables:**
+```
+USER1_TOKEN (Abhishek - Admin Engineering)
+USER2_TOKEN (Ajay - Admin Marketing)
+USER4_TOKEN (Arcade - User Engineering)
+USER5_TOKEN (Shaxma - User No Dept)
+
+USER1_FOLDER1_ID (Personal Documents in MyDrive)
+ENG_FOLDER1_ID (Backend Projects in Engineering)
+ENG_FOLDER2_ID (DMS Project - subfolder)
+MARKETING_FOLDER1_ID (Marketing Campaigns)
+```
+
+---
+
+## ⭐ 11.1 User 1 - Star Folder in Their MyDrive
+
+**Endpoint:** `POST /api/starred/add`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "id": "PASTE_USER1_FOLDER1_ID_HERE",
+  "type": "folder"
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "folder added to starred successfully",
+  "data": {
+    "id": "675e6666666666666666666",
+    "name": "Personal Documents",
+    "type": "folder",
+    "starred": true,
+    "starredAt": "2024-12-28T10:30:00.000Z"
+  }
+}
+```
+
+**✅ Test:** User can star their own MyDrive folder
+
+---
+
+## ⭐ 11.2 User 1 - Star Folder in Engineering Department
+
+**Endpoint:** `POST /api/starred/add`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "id": "PASTE_ENG_FOLDER1_ID_HERE",
+  "type": "folder"
+}
+```
+
+**Expected:** ✅ **200 OK** - Admin can star folders in their department
+
+---
+
+## ⭐ 11.3 User 2 - Try Star Engineering Folder (No Access)
+
+**Endpoint:** `POST /api/starred/add`
+
+**Headers:**
+```
+Authorization: Bearer USER2_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "id": "PASTE_ENG_FOLDER1_ID_HERE",
+  "type": "folder"
+}
+```
+
+**Expected Response (403 Forbidden):**
+```json
+{
+  "success": false,
+  "message": "You do not have permission to view this folder"
+}
+```
+
+**✅ Test:** ❌ **403 Forbidden** - Cannot star folders without view permission  
+**Note:** Middleware validates view access BEFORE starring
+
+---
+
+## ⭐ 11.4 User 4 - Star Shared Folder (Has View Access)
+
+**Context:** User 1 previously shared `ENG_FOLDER1_ID` with User 4 (view permission)
+
+**Endpoint:** `POST /api/starred/add`
+
+**Headers:**
+```
+Authorization: Bearer USER4_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "id": "PASTE_ENG_FOLDER1_ID_HERE",
+  "type": "folder"
+}
+```
+
+**Expected:** ✅ **200 OK** - Can star because has view permission via ACL
+
+**✅ Test:** Users can star folders they have been given access to
+
+---
+
+## ⭐ 11.5 User 5 - Try Star Engineering Folder (No Access)
+
+**Context:** User 5 is not in Engineering dept and has no ACL permissions
+
+**Endpoint:** `POST /api/starred/add`
+
+**Headers:**
+```
+Authorization: Bearer USER5_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "id": "PASTE_ENG_FOLDER1_ID_HERE",
+  "type": "folder"
+}
+```
+
+**Expected:** ❌ **403 Forbidden** - No department access, no ACL permission
+
+---
+
+## ⭐ 11.6 User 1 - Try Star User 2's MyDrive Folder
+
+**Endpoint:** `POST /api/starred/add`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "id": "PASTE_USER2_MYDRIVE_FOLDER_ID_HERE",
+  "type": "folder"
+}
+```
+
+**Expected:** ❌ **403 Forbidden** - Cannot access another user's MyDrive
+
+**✅ Test:** MyDrive isolation is enforced for starring
+
+---
+
+## 📤 11.7 User 1 - Get All Starred Items
+
+**Endpoint:** `GET /api/starred`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "count": 2,
+  "children": [
+    {
+      "_id": "675e1111111111111111111",
+      "name": "Backend Projects",
+      "type": "folder",
+      "color": "#3B82F6",
+      "path": "/Engineering/Backend Projects",
+      "starredAt": "2024-12-28T10:35:00.000Z",
+      "createdAt": "2024-12-27T10:00:00.000Z",
+      "updatedAt": "2024-12-27T10:00:00.000Z",
+      "parentId": "675eENGINEERING_DEPT_ID",
+      "createdBy": {
+        "username": "abhishek_react",
+        "email": "abhishekreact.dev@gmail.com"
+      },
+      "actions": {
+        "canView": true,
+        "canDownload": true,
+        "canUpload": true,
+        "canDelete": true,
+        "canShare": true,
+        "canCreateSubfolder": true,
+        "canUploadFile": true
+      }
+    },
+    {
+      "_id": "675e6666666666666666666",
+      "name": "Personal Documents",
+      "type": "folder",
+      "color": "#3B82F6",
+      "path": "/MyDrive_675e4444444444444444444/Personal Documents",
+      "starredAt": "2024-12-28T10:30:00.000Z",
+      "createdAt": "2024-12-27T09:00:00.000Z",
+      "actions": {
+        "canView": true,
+        "canDownload": true,
+        "canUpload": true,
+        "canDelete": true,
+        "canShare": true,
+        "canCreateSubfolder": true,
+        "canUploadFile": true
+      }
+    }
+  ]
+}
+```
+
+**✅ Tests:**
+- Returns only items user has access to
+- Sorted by `starredAt` (most recent first)
+- Includes `actions` object (like children API)
+- Uses `children` key (same as getChildFolders)
+
+---
+
+## ⭐ 11.8 User 4 - Get Starred Items (Limited Access)
+
+**Endpoint:** `GET /api/starred`
+
+**Headers:**
+```
+Authorization: Bearer USER4_TOKEN
+```
+
+**Expected:** 
+- Should see ONLY folders they starred
+- Should NOT see folders they no longer have access to
+- Actions reflect their limited permissions
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "count": 1,
+  "children": [
+    {
+      "_id": "675e1111111111111111111",
+      "name": "Backend Projects",
+      "type": "folder",
+      "actions": {
+        "canView": true,
+        "canDownload": false,
+        "canUpload": true,
+        "canDelete": false,
+        "canShare": false,
+        "canCreateSubfolder": true,
+        "canUploadFile": true
+      }
+    }
+  ]
+}
+```
+
+**✅ Test:** Actions reflect actual user permissions (view + upload only)
+
+---
+
+## 🗑️ 11.9 User 1 - Unstar Folder
+
+**Endpoint:** `POST /api/starred/remove`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "id": "PASTE_USER1_FOLDER1_ID_HERE",
+  "type": "folder"
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "folder removed from starred successfully",
+  "data": {
+    "id": "675e6666666666666666666",
+    "name": "Personal Documents",
+    "type": "folder",
+    "starred": false
+  }
+}
+```
+
+**✅ Test:** Can unstar previously starred folder
+
+---
+
+## 🗑️ 11.10 User 2 - Try Unstar Engineering Folder (Never Had Access)
+
+**Endpoint:** `POST /api/starred/remove`
+
+**Headers:**
+```
+Authorization: Bearer USER2_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "id": "PASTE_ENG_FOLDER1_ID_HERE",
+  "type": "folder"
+}
+```
+
+**Expected:** ❌ **403 Forbidden** - Still needs view permission to unstar
+
+**✅ Test:** Cannot unstar folders without view access
+
+---
+
+## 📦 11.11 User 1 - Bulk Star Multiple Items
+
+**Endpoint:** `POST /api/starred/bulk`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "folderIds": [
+    "PASTE_ENG_FOLDER1_ID_HERE",
+    "PASTE_ENG_FOLDER2_ID_HERE"
+  ],
+  "fileIds": [],
+  "starred": true
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Bulk starred operation completed",
+  "data": {
+    "totalRequested": 2,
+    "totalUpdated": 2,
+    "starred": true,
+    "results": {
+      "files": {
+        "updated": 0,
+        "notFound": [],
+        "noPermission": [],
+        "deleted": []
+      },
+      "folders": {
+        "updated": 2,
+        "notFound": [],
+        "noPermission": [],
+        "deleted": []
+      }
+    }
+  }
+}
+```
+
+**✅ Test:** Can bulk star multiple folders at once
+
+---
+
+## 📦 11.12 User 2 - Bulk Star (Mixed Permissions)
+
+**Endpoint:** `POST /api/starred/bulk`
+
+**Headers:**
+```
+Authorization: Bearer USER2_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "folderIds": [
+    "PASTE_MARKETING_FOLDER1_ID_HERE",
+    "PASTE_ENG_FOLDER1_ID_HERE"
+  ],
+  "fileIds": [],
+  "starred": true
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Bulk starred operation completed",
+  "data": {
+    "totalRequested": 2,
+    "totalUpdated": 1,
+    "starred": true,
+    "results": {
+      "folders": {
+        "updated": 1,
+        "notFound": [],
+        "noPermission": ["PASTE_ENG_FOLDER1_ID_HERE"],
+        "deleted": []
+      }
+    }
+  }
+}
+```
+
+**✅ Tests:**
+- Successfully stars `MARKETING_FOLDER1_ID` (has access)
+- Fails to star `ENG_FOLDER1_ID` (no access) → added to `noPermission` array
+- Operation continues for accessible items
+
+---
+
+## 📦 11.13 User 4 - Bulk Unstar Items
+
+**Endpoint:** `POST /api/starred/bulk`
+
+**Headers:**
+```
+Authorization: Bearer USER4_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "folderIds": ["PASTE_ENG_FOLDER1_ID_HERE"],
+  "fileIds": [],
+  "starred": false
+}
+```
+
+**Expected:** ✅ **200 OK** - Can unstar items they have access to
+
+---
+
+## 🔒 11.14 Permission Loss Test - User 1 Removes User 4's Access
+
+**Step 1:** User 1 removes User 4's ACL permission on `ENG_FOLDER1_ID`
+
+**Endpoint:** `POST /api/folders/{ENG_FOLDER1_ID}/share`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "users": [],
+  "groups": []
+}
+```
+
+**Step 2:** User 4 gets starred items
+
+**Endpoint:** `GET /api/starred`
+
+**Headers:**
+```
+Authorization: Bearer USER4_TOKEN
+```
+
+**Expected:** 
+- `ENG_FOLDER1_ID` should NOT appear in results
+- Even if starred, items without view access are filtered out
+
+**✅ Test:** Starred items list automatically filters out items user lost access to
+
+---
+
+## 🗑️ 11.15 Deleted Item Test - User 1 Deletes Folder
+
+**Step 1:** User 1 deletes `ENG_FOLDER2_ID`
+
+**Endpoint:** `DELETE /api/folders/{ENG_FOLDER2_ID}`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+```
+
+**Step 2:** User 1 gets starred items
+
+**Endpoint:** `GET /api/starred`
+
+**Headers:**
+```
+Authorization: Bearer USER1_TOKEN
+```
+
+**Expected:** Deleted folder should NOT appear in starred items list
+
+**✅ Test:** Deleted items are automatically filtered from starred results
+
+---
+
+## 📊 Summary of Starred Feature Tests
+
+### ✅ What Should Work:
+
+1. **Star Own Items**
+   - Users can star folders in their MyDrive
+   - Admins can star folders in their departments
+   - Users can star folders they have view access to (via ACL)
+
+2. **Permission Validation**
+   - Middleware validates view permission BEFORE starring
+   - Cannot star items without view access
+   - MyDrive isolation is enforced
+
+3. **Get Starred Items**
+   - Returns only items user still has access to
+   - Automatically filters deleted items
+   - Automatically filters items user lost access to
+   - Sorted by `starredAt` (most recent first)
+   - Includes `actions` object with proper permissions
+
+4. **Bulk Operations**
+   - Can bulk star multiple items at once
+   - Partial success: stars accessible items, skips inaccessible
+   - Returns detailed results: `updated`, `noPermission`, `notFound`, `deleted`
+
+5. **Unstarring**
+   - Users can unstar any previously starred item
+   - Still requires view permission to unstar
+
+### ❌ What Should Fail:
+
+1. **No Access Scenarios**
+   - Cannot star folders in non-assigned departments
+   - Cannot star another user's MyDrive folders
+   - Cannot star folders without view permission
+   - Cannot unstar folders without view permission
+
+2. **Permission Loss**
+   - Starred items disappear when user loses access
+   - Deleted items don't appear in starred list
+
+---
+
+## 🎯 Critical Test Scenarios
+
+### Scenario 1: Cross-Department Starring
+1. User 1 (Engineering) creates folder
+2. User 1 stars the folder → ✅ Success
+3. User 2 (Marketing) tries to star same folder → ❌ 403 Forbidden
+4. User 1 shares folder with User 2 (view permission)
+5. User 2 stars the folder → ✅ Success
+6. User 1 removes sharing
+7. User 2 gets starred items → Folder no longer appears
+
+### Scenario 2: Bulk Operations with Mixed Access
+1. User has access to Folders A, B, C
+2. User does NOT have access to Folders D, E
+3. User bulk stars: `[A, B, C, D, E]`
+4. Result: A, B, C starred successfully
+5. Result: D, E in `noPermission` array
+6. Operation completes without throwing error
+
+### Scenario 3: MyDrive Privacy
+1. User 1 stars folder in their MyDrive
+2. User 2 cannot star User 1's MyDrive folder
+3. User 2 cannot see User 1's starred MyDrive items
+4. Each user sees only their own starred items
+
+---
+
+## 🔍 Additional Test Cases
+
+### Test Case 1: Star Non-Existent Item
+**Request:**
+```json
+{
+  "id": "000000000000000000000000",
+  "type": "folder"
+}
+```
+**Expected:** ❌ **404 Not Found** - "Folder not found"
+
+---
+
+### Test Case 2: Star Already Starred Item
+**Expected:** Should update `starredAt` timestamp (upsert behavior)
+
+---
+
+### Test Case 3: Get Starred Items - Empty Result
+**Context:** User 5 (no starred items)  
+**Expected:** 
+```json
+{
+  "success": true,
+  "count": 0,
+  "children": []
+}
+```
+
+---
+
+### Test Case 4: Invalid Item Type
+**Request:**
+```json
+{
+  "id": "675e1111111111111111111",
+  "type": "invalid"
+}
+```
+**Expected:** ❌ **400 Bad Request** - "Invalid item type"
+
+---
+
+## 📝 Testing Checklist
+
+- [ ] Star folder in own MyDrive
+- [ ] Star folder in assigned department
+- [ ] Try star folder in non-assigned department (should fail)
+- [ ] Try star another user's MyDrive folder (should fail)
+- [ ] Star folder with ACL view access
+- [ ] Try star folder without view access (should fail)
+- [ ] Get starred items (returns accessible items only)
+- [ ] Unstar previously starred folder
+- [ ] Try unstar folder without access (should fail)
+- [ ] Bulk star multiple folders
+- [ ] Bulk star with mixed permissions (partial success)
+- [ ] Bulk unstar folders
+- [ ] Verify deleted items don't appear in starred list
+- [ ] Verify items user lost access to don't appear
+- [ ] Verify actions reflect actual user permissions
+- [ ] Verify response format matches getChildFolders API
+
+---
+
+## 🚀 Quick Test Script
+
+```bash
+# Variables (replace with actual IDs)
+USER1_TOKEN="your_token_here"
+USER1_FOLDER1_ID="folder_id_here"
+ENG_FOLDER1_ID="folder_id_here"
+
+# Test 1: Star folder
+curl -X POST http://localhost:5000/api/starred/add \
+  -H "Authorization: Bearer $USER1_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"'$USER1_FOLDER1_ID'","type":"folder"}'
+
+# Test 2: Get starred items
+curl -X GET http://localhost:5000/api/starred \
+  -H "Authorization: Bearer $USER1_TOKEN"
+
+# Test 3: Unstar folder
+curl -X POST http://localhost:5000/api/starred/remove \
+  -H "Authorization: Bearer $USER1_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"'$USER1_FOLDER1_ID'","type":"folder"}'
+
+# Test 4: Bulk star
+curl -X POST http://localhost:5000/api/starred/bulk \
+  -H "Authorization: Bearer $USER1_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"folderIds":["'$ENG_FOLDER1_ID'"],"fileIds":[],"starred":true}'
+```
+
+---
+
+## 🎓 Key Learnings
+
+1. **Starred is permission-aware**: Users can only star items they can view
+2. **Dynamic filtering**: Starred list automatically adapts to current permissions
+3. **Consistent UI**: Same response format as children API for easy frontend integration
+4. **Bulk operations**: Handle partial success gracefully
+5. **MyDrive isolation**: Enforced at every level including starring
+
 ## 📊 Summary of Test Results
 
 ### ✅ What Should Work:
